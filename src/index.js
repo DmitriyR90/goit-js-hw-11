@@ -1,61 +1,93 @@
 import './css/styles.css';
 import axios from 'axios';
 import { Notify } from 'notiflix/build/notiflix-notify-aio';
+import SimpleLightbox from 'simplelightbox';
+import 'simplelightbox/dist/simple-lightbox.min.css';
 
 axios.defaults.baseURL =
-  'https://pixabay.com/api?key=29525143-9c76bb8aba39698f94cc40e50&image_type=photo&orientation=horizontal&safesearch=true&SameSite=None';
+  'https://pixabay.com/api?key=29525143-9c76bb8aba39698f94cc40e50&image_type=photo&orientation=horizontal&safesearch=true';
 
 const findedImages = document.querySelector('.gallery');
+
 const searchField = document.querySelector('.search-form');
 const loadMoreBtn = document.querySelector('.load-more');
+const resultsOnPage = 40;
 
-let searchData = '';
+let searchData;
 let currentPage = 1;
+let showedImagesAmount = 0;
+let findedImageQuantity = 0;
+
+findedImages.addEventListener('click', onViewLargeImg);
+
+let gallery = new SimpleLightbox('.gallery a', {
+  captionType: 'attr',
+  captionsData: 'alt',
+  captionDelay: 250,
+});
 
 searchField.addEventListener('submit', onSearch);
 loadMoreBtn.addEventListener('click', onLoadMoreImages);
 
-// let items = [];
-
 function onSearch(e) {
   e.preventDefault();
 
+  if (searchData === e.target.elements.searchQuery.value) return;
+
   searchData = e.target.elements.searchQuery.value;
+  clearGallery();
 
   fetchData(searchData);
-
-  loadMoreBtn.classList.add('show');
 }
 
-function onLoadMoreImages() {
+async function onLoadMoreImages() {
   currentPage += 1;
 
-  fetchData();
+  if (currentPage === 2) {
+    activateInfScroll();
+  }
+
+  await fetchData();
+
+  scrollingDown();
+  hideLoadMoreBtn();
 }
 
-function fetchData() {
-  axios
-    .get(`&q=${searchData}&page=${currentPage}`)
-    // .get(`&q=cats`)
-    .then(({ data }) => {
-      if (data.totalHits === 0) {
-        Notify.failure(
-          `We're sorry, but you've reached the end of search results.`
-        );
-        findedImages.innerHTML = '';
-        return;
-      }
-      Notify.success(`Hooray! We found ${data.totalHits} images.`);
-      renderList(data.hits);
-      console.log(data.hits);
-    })
-    .catch(error => {
-      console.log(error);
-    });
+async function fetchData() {
+  try {
+    const { data } = await axios.get(
+      `&q=${searchData}&per_page=${resultsOnPage}&page=${currentPage}`
+    );
+
+    findedImageQuantity = data.totalHits;
+    showedImagesAmount += data.hits.length;
+
+    if (findedImageQuantity === 0) {
+      clearGallery();
+
+      Notify.failure(
+        `Sorry, there are no images matching your search query. Please try again.`
+      );
+      return;
+    }
+
+    if (showedImagesAmount <= resultsOnPage) {
+      Notify.success(`Hooray! We found ${findedImageQuantity} images.`);
+      showLoadMoreBtn();
+    }
+
+    renderList(data.hits);
+  } catch (error) {
+    console.log(error.message);
+    deactiveInfScroll();
+    Notify.warning(
+      "We're sorry, but you've reached the end of search results."
+    );
+  }
 }
 
-function renderList(items) {
-  const list = items
+async function renderList(items) {
+  const list = await items
     .map(
       ({
         webformatURL,
@@ -66,7 +98,7 @@ function renderList(items) {
         comments,
         downloads,
       }) =>
-        `<div class="photo-card">
+        `<a href="${largeImageURL}"><div class="photo-card">
       <img src="${webformatURL} " alt="${tags}" loading="lazy" />
       <div class="info">
         <p class="info-item">
@@ -82,19 +114,59 @@ function renderList(items) {
           <b>Downloads</b></br>${downloads}
         </p>
       </div>
-    </div>`
+    </div></a>`
     )
     .join('');
 
   findedImages.insertAdjacentHTML('beforeend', list);
-  console.log(items.length);
+
+  gallery.refresh();
 }
 
-// async function getUser() {
-//     try {
-//       const response = await axios.get('/user?ID=12345');
-//       console.log(response);
-//     } catch (error) {
-//       console.error(error);
-//     }
-//   }
+function clearGallery() {
+  hideLoadMoreBtn();
+  currentPage = 1;
+  findedImages.innerHTML = '';
+  showedImagesAmount = 0;
+  deactiveInfScroll();
+}
+
+function showLoadMoreBtn() {
+  loadMoreBtn.classList.add('show');
+}
+
+function hideLoadMoreBtn() {
+  loadMoreBtn.classList.remove('show');
+}
+
+function onViewLargeImg(e) {
+  e.preventDefault();
+}
+
+function scrollingDown() {
+  const { height: cardHeight } = document
+    .querySelector('.gallery')
+    .firstElementChild.getBoundingClientRect();
+
+  window.scrollBy({
+    top: cardHeight * 2,
+    behavior: 'smooth',
+  });
+}
+
+function activateInfScroll() {
+  window.addEventListener('scroll', nextPageInfScroll);
+}
+
+function deactiveInfScroll() {
+  window.removeEventListener('scroll', nextPageInfScroll);
+}
+
+function nextPageInfScroll() {
+  const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+
+  if (scrollTop + clientHeight >= scrollHeight) {
+    onLoadMoreImages();
+    scrollingDown();
+  }
+}
