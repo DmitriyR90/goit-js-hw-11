@@ -4,8 +4,9 @@ import { Notify } from 'notiflix/build/notiflix-notify-aio';
 import SimpleLightbox from 'simplelightbox';
 import 'simplelightbox/dist/simple-lightbox.min.css';
 
-axios.defaults.baseURL =
-  'https://pixabay.com/api?key=29525143-9c76bb8aba39698f94cc40e50&image_type=photo&orientation=horizontal&safesearch=true';
+axios.defaults.baseURL = 'https://pixabay.com/api';
+
+const KEY = '29525143-9c76bb8aba39698f94cc40e50';
 
 const findedImages = document.querySelector('.gallery');
 
@@ -56,7 +57,7 @@ async function onLoadMoreImages() {
 async function fetchData() {
   try {
     const { data } = await axios.get(
-      `&q=${searchData}&per_page=${resultsOnPage}&page=${currentPage}`
+      `?key=${KEY}&q=${searchData}&per_page=${resultsOnPage}&page=${currentPage}&image_type=photo&orientation=horizontal&safesearch=true`
     );
 
     findedImageQuantity = data.totalHits;
