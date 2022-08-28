@@ -74,6 +74,9 @@ async function fetchData() {
 
     if (showedImagesAmount <= resultsOnPage) {
       Notify.success(`Hooray! We found ${findedImageQuantity} images.`);
+    }
+
+    if (findedImageQuantity > resultsOnPage) {
       showLoadMoreBtn();
     }
 
