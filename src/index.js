@@ -83,10 +83,6 @@ async function fetchData() {
     renderList(data.hits);
   } catch (error) {
     console.log(error.message);
-    deactiveInfScroll();
-    Notify.warning(
-      "We're sorry, but you've reached the end of search results."
-    );
   }
 }
 
@@ -172,5 +168,11 @@ function nextPageInfScroll() {
   if (scrollTop + clientHeight >= scrollHeight) {
     onLoadMoreImages();
     scrollingDown();
+    if (showedImagesAmount >= findedImageQuantity) {
+      deactiveInfScroll();
+      Notify.warning(
+        "We're sorry, but you've reached the end of search results."
+      );
+    }
   }
 }
